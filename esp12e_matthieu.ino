@@ -62,7 +62,6 @@ void dcmot_ctrl(dcmot_act_t dcmot_act, unsigned int grade) {
     	grade = 9;
     switch(dcmot_act) {
 	case DC_INIT:
-        // TODO: control D3 as a PWM output, in order to change DC motor speed
 	    pinMode(D1, OUTPUT);
 	    pinMode(D2, OUTPUT);
 	    pinMode(D3, OUTPUT);
