@@ -7,7 +7,7 @@
 //
 // Created by   : Lorenzo Columbo
 // Created at   : 12.03.17
-// Revision     : 1.0.0
+// Version      : 1.1
 //
 // ++
 // Description  : ESP12-E firmware for Matthieu
@@ -28,13 +28,13 @@ rxStateType rxState = BEG_CHAR;
 
 /*
  * Control the rotation of the servo motor, by specifying an action between
- * init, left and right and an integer grade in the range [0, 3]; for the special
+ * init, left and right and an integer grade in the range [0, 1]; for the special
  * action "init", grade value is irrelevant; arguments (SRV_LEFT, 0) and (SRV_RIGHT, 0)
  * have the same effect.
  */
 void servo_ctrl(servo_act_t servo_dir, unsigned int grade) {
-    if(grade > 3)
-    	grade = 3;
+    if(grade > 1)
+    	grade = 1;
     switch(servo_dir) {
 	case SRV_INIT:
 	    pinMode(D0, OUTPUT);
@@ -70,8 +70,8 @@ void dcmot_ctrl(dcmot_act_t dcmot_act, unsigned int grade) {
         analogWrite(D3, 0);
         break;
 	case DC_FWD:
-        digitalWrite(D1, LOW);
-        digitalWrite(D2, HIGH);
+        digitalWrite(D1, HIGH);
+        digitalWrite(D2, LOW);
         if((grade_old == 0) && (grade > 0)) {
             digitalWrite(D3, HIGH);
             delay(100);
@@ -79,8 +79,8 @@ void dcmot_ctrl(dcmot_act_t dcmot_act, unsigned int grade) {
         analogWrite(D3, 1024*grade/9*3/4);
         break;
 	case DC_BWD:
-        digitalWrite(D1, HIGH);
-        digitalWrite(D2, LOW);
+        digitalWrite(D1, LOW);
+        digitalWrite(D2, HIGH);
         digitalWrite(D3, HIGH);
         if((grade_old == 0) && (grade > 0)) {
             digitalWrite(D3, HIGH);
@@ -141,6 +141,7 @@ void setup() {
  */
 void loop() {
 	static String updateString;
+	static bool updateStringCheck;
 	static char dcmotCmd;
 	static char dcmotNum;
 	static char servoCmd;
@@ -157,6 +158,8 @@ void loop() {
 		}
 	} else {
 		if (!client.connected()) {
+		    servo_ctrl(SRV_INIT, 0);
+		    dcmot_ctrl(DC_INIT, 0);
 			Serial.println("");
 			Serial.println("Client disconnected.");
 			alreadyConnected = false;
@@ -169,15 +172,30 @@ void loop() {
 			servoCmd = updateString[3];
 			servoNum = updateString[4];
 
-			Serial.printf("%c%c%c%c\n\r", dcmotCmd, dcmotNum, servoCmd, servoNum);
-			if (dcmotCmd == 'A')
-				dcmot_ctrl(DC_FWD, (unsigned int) ((dcmotNum-0x30)*3));
-			if (dcmotCmd == 'I')
-				dcmot_ctrl(DC_BWD, (unsigned int) ((dcmotNum-0x30)*3));
-			if (servoCmd == 'S')
+			updateStringCheck = true;
+			if (dcmotCmd == 'F') {
+				dcmot_ctrl(DC_FWD, (unsigned int) (dcmotNum-0x30));
+			} else if (dcmotCmd == 'B') {
+				dcmot_ctrl(DC_BWD, (unsigned int) (dcmotNum-0x30));
+			} else {
+				updateStringCheck = false;
+			}
+			if (servoCmd == 'L') {
 				servo_ctrl(SRV_LEFT, ((unsigned int) (servoNum-0x30)));
-			if (servoCmd == 'D')
+			} else if (servoCmd == 'R') {
 				servo_ctrl(SRV_RIGHT, ((unsigned int) (servoNum-0x30)));
+			} else {
+				updateStringCheck = false;
+			}
+			if (!updateStringCheck) {
+			    servo_ctrl(SRV_INIT, 0);
+			    dcmot_ctrl(DC_INIT, 0);
+				Serial.println("");
+				Serial.println("Update string check failed!");
+				alreadyConnected = false;
+			} else {
+				Serial.printf("%c%c%c%c\n\r", dcmotCmd, dcmotNum, servoCmd, servoNum);
+			}
 		}
 	}
 	delay(10);

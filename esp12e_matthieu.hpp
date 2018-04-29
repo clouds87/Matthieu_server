@@ -7,7 +7,7 @@
 //
 // Created by   : Lorenzo Columbo
 // Created at   : 12.03.17
-// Revision     : 1.0.0
+// Version      : 1.1
 //
 // ++
 // Description  : ESP12-E firmware for Matthieu
